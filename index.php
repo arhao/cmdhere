@@ -440,7 +440,7 @@ if ($_GET['act'] == "iploc")
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, "https://www.ipip.net/ip.html");
   curl_setopt($ch, CURLOPT_REFERER, "https://www.ipip.net/ip.html");
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_USERAGENT, "curl/7.47.0");
   curl_setopt($ch, CURLOPT_POST, 1);
   curl_setopt($ch, CURLOPT_POSTFIELDS, "ip=".$ip);
@@ -463,6 +463,47 @@ if ($_GET['act'] == "iploc")
   exit;
 }
 
+// 得到当前登录用户
+function get_logon_events()
+{
+  $events = array();
+  $i = 0;
+  $lines = str_split(file_get_contents('/var/log/wtmp'), 384);
+  foreach ($lines as $line)
+  {
+    preg_match('/(.{4})(.{4})(.{32})(.{4})(.{32})(.{256})(.{4})(.{4})(.{4})(.{4})(.{4})/', $line, $matches);
+    $events[$i] = array();
+    $events[$i]['type'] = unpack('I', $matches[1])[1];
+    $events[$i]['pid'] = unpack('I', $matches[2])[1];
+    $events[$i]['line'] = trim($matches[3]);
+    $events[$i]['inittab'] = $matches[4];
+    $events[$i]['user'] = trim($matches[5]);
+    $events[$i]['host'] = trim($matches[6]);
+    $events[$i]['t1'] = $matches[7];
+    $events[$i]['t2'] = $matches[8];
+    $events[$i]['gmtime'] = unpack('I', $matches[9])[1];
+    $events[$i]['t4'] = $matches[10];
+    $events[$i]['t5'] = $matches[11];
+    $i++;
+  }
+  $events2 = array();
+  foreach ($events as $event)
+  {
+    if ($event['user'] == '')
+       continue;
+    switch ($event['type'])
+    {
+    case 7:
+      $events2[$event['line']] = $event;
+      break;
+    case 8:
+      unset($events2[$event['line']]);
+      break;
+    }
+  }
+  return $events2;
+}
+
 ?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -470,47 +511,21 @@ if ($_GET['act'] == "iploc")
 <title><?php echo $_SERVER['SERVER_NAME']; ?></title>
 <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="robots" content="noindex, nofollow"> 
-<!-- Powered by: Yahei.Net -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="//lib.sinaapp.com/js/bootstrap/v3.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
 <style type="text/css">
 <!--
 * {font-family: Tahoma, "Microsoft Yahei", Arial; }
-body{text-align: center; margin: 0 auto; padding: 0; background-color:#FFFFFF;font-size:12px;font-family:Tahoma, Arial}
-h1 {font-size: 26px; font-weight: normal; padding: 0; margin: 0; color: #444444;}
-h1 small {font-size: 11px; font-family: Tahoma; font-weight: bold; }
-a{color: #000000; text-decoration:none;}
-a.black{color: #000000; text-decoration:none;}
-b{color: #999999;}
-table{width:100%; clear:both;padding: 0; margin: 0 0 10px;border-collapse:collapse; border-spacing: 0;}
-th{padding: 3px 6px; font-weight:bold;background:#3066a6;color:#FFFFFF;border:1px solid #3066a6; text-align:left;}
-.th_1{padding: 3px 6px; font-weight:bold;background:#666699;color:#FFFFFF;border:1px solid #3066a6; text-align:left;}
-.th_2{padding: 3px 6px; font-weight:bold;background:#417291;color:#FFFFFF;border:1px solid #3066a6; text-align:left;}
-.th_3{padding: 3px 6px; font-weight:bold;background:#067201;color:#FFFFFF;border:1px solid #3066a6; text-align:left;}
-.th_4{padding: 3px 6px; font-weight:bold;background:#666666;color:#FFFFFF;border:1px solid #CCCCCC; text-align:left;}
-.th_5{padding: 3px 6px; font-weight:bold;background:#333333;color:#FFFFFF;border:1px solid #CCCCCC; text-align:left;}
-.th_6{padding: 3px 6px; font-weight:bold;background:#FF6600;color:#FFFFFF;border:1px solid #FF6600; text-align:left;}
-tr{padding: 0; background:#F7F7F7;}
-td{padding: 3px 6px; border:1px solid #CCCCCC;}
-input{padding: 2px; background: #FFFFFF; border-top:1px solid #666666; border-left:1px solid #666666; border-right:1px solid #CCCCCC; border-bottom:1px solid #CCCCCC; font-size:12px}
-input.btn{font-weight: bold; height: 20px; line-height: 20px; padding: 0 6px; color:#666666; background: #f2f2f2; border:1px solid #999;font-size:12px}
-.bar {border:1px solid #999999; background:#FFFFFF; height:5px; font-size:2px; width:89%; margin:2px 0 5px 0;padding:1px;overflow: hidden;}
-.bar_1 {border:1px dotted #999999; background:#FFFFFF; height:5px; font-size:2px; width:89%; margin:2px 0 5px 0;padding:1px;overflow: hidden;}
-.barli_red{background:#ff6600; height:5px; margin:0px; padding:0;}
-.barli_blue{background:#0099FF; height:5px; margin:0px; padding:0;}
-.barli_green{background:#36b52a; height:5px; margin:0px; padding:0;}
-.barli_black{background:#333; height:5px; margin:0px; padding:0;}
-.barli_1{background:#999999; height:5px; margin:0px; padding:0;}
-.barli{background:#36b52a; height:5px; margin:0px; padding:0;}
-#page {width: 920px; padding: 0 20px; margin: 0 auto; text-align: left;}
-#header{position: relative; padding: 10px;}
-#footer {padding: 15px 0; text-align: center; font-size: 11px; font-family: Tahoma, Verdana;}
-.w_small{font-family: Courier New;}
 .w_number{color: #f800fe;}
-.sudu {padding: 0; background:#5dafd1; }
-.suduk { margin:0px; padding:0;}
-.resYes{}
-.resNo{color: #FF0000;}
-.word{word-break:break-all;}
+.bar {border:1px solid #999999; background:#FFFFFF; width:89%; margin:2px 0 5px 0;padding:1px;overflow: hidden;}
+.bar_1 {border:1px dotted #999999; background:#FFFFFF; width:89%; margin:2px 0 5px 0;padding:1px;overflow: hidden;}
+.barli_red{background:#ff6600; height:6px; margin:0px; padding:0;}
+.barli_blue{background:#0099FF; height:6px; margin:0px; padding:0;}
+.barli_green{background:#36b52a; height:6px; margin:0px; padding:0;}
+.barli_black{background:#333; height:6px; margin:0px; padding:0;}
+.barli_1{background:#999999; height:6px; margin:0px; padding:0;}
+.barli{background:#36b52a; height:6px; margin:0px; padding:0;}
 -->
 </style>
 <script src="//lib.sinaapp.com/js/jquery/1.7/jquery.min.js"></script>
@@ -618,7 +633,7 @@ function displayCPUData(dataJSON)
   $("#cpuIRQ").html(dataJSON.irq.toFixed(1));
   $("#cpuSOFTIRQ").html(dataJSON.softirq.toFixed(1));
   $("#cpuSTEAL").html(dataJSON.steal.toFixed(1));
-  
+
   usage = 100 - (dataJSON.idle+dataJSON.iowait);
   if (usage > 75)
     $("#barcpuPercent").width(usage+'%').removeClass().addClass('barli_black');
@@ -649,11 +664,9 @@ function displayIPLocData(dataJSON)
 
 <body>
 
-<a name="w_top"></a>
-
-<div id="page">
+<div class="container">
 <!--
-<table>
+<table class="table table-striped table-bordered table-hover table-condensed">
   <tr>
     <th class="w_logo">PHP探针</th>
     <th class="w_top"><a href="/files/">文件下载</a></th>
@@ -664,79 +677,83 @@ function displayIPLocData(dataJSON)
 -->
 
 <!--服务器相关参数-->
-<table>
-  <tr><th colspan="4">服务器参数</th></tr>
-  <tr>
-    <td>服务器域名/IP地址</td>
-    <td colspan="3"><?php echo @get_current_user();?> - <?php echo $_SERVER['SERVER_NAME'];?>(<?php echo @gethostbyname($_SERVER['SERVER_NAME']); ?>)&nbsp;&nbsp;你的IP地址是：<?php echo @$_SERVER['REMOTE_ADDR'];?> (<span id="iploc">未知位置</span>) </td>
-  </tr>
-  <tr>
-    <td>服务器标识</td>
-    <td colspan="3"><?php if($sysInfo['win_n'] != ''){echo $sysInfo['win_n'];}else{echo @php_uname();};?></td>
-  </tr>
-  <tr>
-    <td width="13%">服务器操作系统</td>
-    <td width="37%"><?php $release_info = @parse_ini_file(glob("/etc/*release")[0]); echo isset($release_info["DISTRIB_DESCRIPTION"])?$release_info["DISTRIB_DESCRIPTION"]:(isset($release_info["PRETTY_NAME"])?$release_info["PRETTY_NAME"]:php_uname('s').' '.php_uname('r'));?> &nbsp;内核版本：<?php if('/'==DIRECTORY_SEPARATOR){$os = explode(' ',php_uname()); echo $os[2];}else{echo $os[1];} ?></td>
-    <td width="13%">服务器解译引擎</td>
-    <td width="37%"><?php echo $_SERVER['SERVER_SOFTWARE'];?></td>
-  </tr>
-  <tr>
-    <td>服务器语言</td>
-    <td><?php echo getenv("HTTP_ACCEPT_LANGUAGE");?></td>
-    <td>服务器端口</td>
-    <td><?php echo $_SERVER['SERVER_PORT'];?></td>
-  </tr>
-  <tr>
-    <td>服务器主机名</td>
-    <td><?php if('/'==DIRECTORY_SEPARATOR ){echo $os[1];}else{echo $os[2];} ?></td>
-    <td>绝对路径</td>
-    <td><?php echo $_SERVER['DOCUMENT_ROOT']?str_replace('\\','/',$_SERVER['DOCUMENT_ROOT']):str_replace('\\','/',dirname(__FILE__));?></td>
-  </tr>
-  <tr>
-    <td>管理员邮箱</td>
-    <td><?php echo $_SERVER['SERVER_ADMIN'];?></td>
-    <td>探针路径</td>
-    <td><?php echo str_replace('\\','/',__FILE__)?str_replace('\\','/',__FILE__):$_SERVER['SCRIPT_FILENAME'];?></td>
-  </tr>
+<table class="table table-striped table-bordered table-hover table-condensed">
+  <thead>
+    <tr>
+      <th colspan="4">服务器参数</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>服务器域名/IP地址</td>
+      <td colspan="3"><?php echo @get_current_user();?> - <?php echo $_SERVER['SERVER_NAME'];?>(<?php echo @gethostbyname($_SERVER['SERVER_NAME']); ?>)&nbsp;&nbsp;你的IP地址是：<?php echo @$_SERVER['REMOTE_ADDR'];?> (<span id="iploc">未知位置</span>)</td>
+    </tr>
+    <tr>
+      <td>服务器标识</td>
+      <td colspan="3"><?php if($sysInfo['win_n'] != ''){echo $sysInfo['win_n'];}else{echo @php_uname();};?></td>
+    </tr>
+    <tr>
+      <td>服务器操作系统</td>
+      <td><?php $release_info = @parse_ini_file(glob("/etc/*release")[0]); echo isset($release_info["DISTRIB_DESCRIPTION"])?$release_info["DISTRIB_DESCRIPTION"]:(isset($release_info["PRETTY_NAME"])?$release_info["PRETTY_NAME"]:php_uname('s').' '.php_uname('r'));?> &nbsp;内核版本：<?php if('/'==DIRECTORY_SEPARATOR){$os = explode(' ',php_uname()); echo $os[2];}else{echo $os[1];} ?></td>
+      <td>服务器解译引擎</td>
+      <td><?php echo $_SERVER['SERVER_SOFTWARE'];?></td>
+    </tr>
+    <tr>
+      <td>服务器语言</td>
+      <td><?php echo getenv("HTTP_ACCEPT_LANGUAGE");?></td>
+      <td>服务器端口</td>
+      <td><?php echo $_SERVER['SERVER_PORT'];?></td>
+    </tr>
+    <tr>
+      <td>服务器主机名</td>
+      <td><?php if('/'==DIRECTORY_SEPARATOR ){echo $os[1];}else{echo $os[2];} ?></td>
+      <td>管理员邮箱</td>
+      <td><?php echo $_SERVER['SERVER_ADMIN'];?></td>
+    </tr>
+    <tr>
+      <td>探针路径</td>
+      <td colspan="3"><?php echo str_replace('\\','/',__FILE__)?str_replace('\\','/',__FILE__):$_SERVER['SCRIPT_FILENAME'];?></td>
+    </tr>
+  </tbody>
 </table>
 
-<table>
+<table class="table table-striped table-bordered table-hover table-condensed">
   <tr><th colspan="6">服务器实时数据</th></tr>
   <tr>
-    <td width="13%" >服务器当前时间</td>
-    <td width="37%" ><span id="stime"><?php echo $stime;?></span></td>
-    <td width="13%" >服务器已运行时间</td>
-    <td width="37%" colspan="3"><span id="uptime"><?php echo $uptime;?></span></td>
+    <td>服务器当前时间</td>
+    <td><span id="stime"><?php echo $stime;?></span></td>
+    <td>服务器已运行时间</td>
+    <td colspan="3"><span id="uptime"><?php echo $uptime;?></span></td>
   </tr>
   <tr>
-    <td width="13%">CPU型号 [<?php echo $sysInfo['cpu']['num'];?>核]</td>
-    <td width="87%" colspan="5"><?php echo $sysInfo['cpu']['model'];?></td>
+    <td>CPU型号 [<?php echo $sysInfo['cpu']['num'];?>核]</td>
+    <td colspan="5"><?php echo $sysInfo['cpu']['model'];?></td>
   </tr>
 <?php if (isset($sysInfo['boardVendor'])) : ?>
   <tr>
-    <td width="13%">主板型号</td>
-    <td width="37%"><?php echo $sysInfo['boardVendor'] . " " . $sysInfo['boardName'] . " " . $sysInfo['boardVersion'];?></td>
-    <td width="13%">主板BIOS</td>
-    <td width="37%"><?php echo $sysInfo['BIOSVendor'] . " " . $sysInfo['BIOSVersion'] . " " . $sysInfo['BIOSDate'];?></td>
+    <td>主板型号</td>
+    <td><?php echo $sysInfo['boardVendor'] . " " . $sysInfo['boardName'] . " " . $sysInfo['boardVersion'];?></td>
+    <td>主板BIOS</td>
+    <td><?php echo $sysInfo['BIOSVendor'] . " " . $sysInfo['BIOSVersion'] . " " . $sysInfo['BIOSDate'];?></td>
   </tr>
 <?php endif; ?>
 <?php if (isset($sysInfo['diskModel'])) : ?>
   <tr>
-    <td width="13%">硬盘型号</td>
-    <td width="87%" colspan="5"><?php echo $sysInfo['diskModel'] . " " . $sysInfo['diskVendor'];?></td>
+    <td>硬盘型号</td>
+    <td colspan="5"><?php echo $sysInfo['diskModel'] . " " . $sysInfo['diskVendor'];?></td>
   </tr>
 <?php endif; ?>
   <tr>
     <td>CPU使用状况</td>
     <td colspan="5">
-      <font id="cpuUSER" color="#CC0000">0.0</font> user, 
-      <font id="cpuSYS" color="#CC0000">0.0</font> sys, 
-      <font id="cpuNICE">0.0</font> nice, 
-      <font id="cpuIDLE" color="#CC0000">99.9</font> idle, 
-      <font id="cpuIOWAIT">0.0</font> iowait, 
-      <font id="cpuIRQ">0.0</font> irq, 
-      <font id="cpuSOFTIRQ">0.0</font> softirq, 
-      <font id="cpuSTEAL">0.0</font> steal 
+      <font id="cpuUSER" color="#CC0000">0.0</font> user,
+      <font id="cpuSYS" color="#CC0000">0.0</font> sys,
+      <font id="cpuNICE">0.0</font> nice,
+      <font id="cpuIDLE" color="#CC0000">99.9</font> idle,
+      <font id="cpuIOWAIT">0.0</font> iowait,
+      <font id="cpuIRQ">0.0</font> irq,
+      <font id="cpuSOFTIRQ">0.0</font> softirq,
+      <font id="cpuSTEAL">0.0</font> steal
       <div class="bar"><div id="barcpuPercent" class="barli_green" style="width: 1px;">&nbsp;</div> </div>
     </td>
   </tr>
@@ -820,23 +837,23 @@ if($sysInfo['swapTotal']>0)
 </table>
 
 <?php if (false !== ($strs = @file("/proc/net/dev"))) : ?>
-<table>
+<table class="table table-striped table-bordered table-hover table-condensed">
     <tr><th colspan="5">网络使用状况</th></tr>
 <?php for ($i = 2; $i < count($strs); $i++ ) : ?>
 <?php preg_match_all( "/([^\s]+):[\s]{0,}(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/", $strs[$i], $info );?>
-     <tr>
-        <td width="13%"><?php echo $info[1][0]?> : </td>
-        <td width="29%">入网: <font color='#CC0000'><span id="NetInput<?php echo $i?>"><?php echo $NetInput[$i]?></span></font></td>
+  <tr>
+    <td width="13%"><?php echo $info[1][0]?> : </td>
+    <td width="29%">入网: <font color='#CC0000'><span id="NetInput<?php echo $i?>"><?php echo $NetInput[$i]?></span></font></td>
     <td width="14%">实时: <font color='#CC0000'><span id="NetInputSpeed<?php echo $i?>">0B/s</span></font></td>
-        <td width="29%">出网: <font color='#CC0000'><span id="NetOut<?php echo $i?>"><?php echo $NetOut[$i]?></span></font></td>
+    <td width="29%">出网: <font color='#CC0000'><span id="NetOut<?php echo $i?>"><?php echo $NetOut[$i]?></span></font></td>
     <td width="14%">实时: <font color='#CC0000'><span id="NetOutSpeed<?php echo $i?>">0B/s</span></font></td>
-    </tr>
+  </tr>
 <?php endfor; ?>
 </table>
 <?php endif; ?>
 
 <?php if (0 < count($strs = array_splice(@file("/proc/net/arp"), 1))) : ?>
-<table>
+<table class="table table-striped table-bordered table-hover table-condensed">
     <tr><th colspan="5">网络邻居</th></tr>
 <?php $seen = array(); ?>
 <?php for ($i = 0; $i < count($strs); $i++ ) : ?>
@@ -844,137 +861,85 @@ if($sysInfo['swapTotal']>0)
 <?php if ('0x2' == $info[2] && !isset($seen[$info[3]])) : ?>
 <?php $seen[$info[3]] = true; ?>
      <tr>
-        <td width="13%"><?php echo $info[0];?> </td>
-        <td width="29%">MAC: <font color='#CC0000'><?php  echo $info[3];?></font></td>
-        <td width="14%">类型: <font color='#CC0000'><?php echo $info[1]=='0x1'?'ether':$info[1];?></font></td>
-        <td width="29%">接口: <font color='#CC0000'><?php echo $info[5];?></font></td>
+        <td><?php echo $info[0];?> </td>
+        <td>MAC: <font color='#CC0000'><?php  echo $info[3];?></font></td>
+        <td>类型: <font color='#CC0000'><?php echo $info[1]=='0x1'?'ether':$info[1];?></font></td>
+        <td>接口: <font color='#CC0000'><?php echo $info[5];?></font></td>
     </tr>
 <?php endif; ?>
 <?php endfor; ?>
 </table>
 <?php endif; ?>
 
-<?php
-function get_logon_events()
-{
-  $events = array();
-  $i = 0;
-  $lines = str_split(file_get_contents('/var/log/wtmp'), 384);
-  foreach ($lines as $line)
-  {
-    preg_match('/(.{4})(.{4})(.{32})(.{4})(.{32})(.{256})(.{4})(.{4})(.{4})(.{4})(.{4})/', $line, $matches);
-    $events[$i] = array();
-    $events[$i]['type'] = unpack('I', $matches[1])[1];
-    $events[$i]['pid'] = unpack('I', $matches[2])[1];
-    $events[$i]['line'] = trim($matches[3]);
-    $events[$i]['inittab'] = $matches[4];
-    $events[$i]['user'] = trim($matches[5]);
-    $events[$i]['host'] = trim($matches[6]);
-    $events[$i]['t1'] = $matches[7];
-    $events[$i]['t2'] = $matches[8];
-    $events[$i]['gmtime'] = unpack('I', $matches[9])[1];
-    $events[$i]['t4'] = $matches[10];
-    $events[$i]['t5'] = $matches[11];
-    $i++;
-  }
-  $events2 = array();
-  foreach ($events as $event)
-  {
-    if ($event['user'] == '')
-       continue;
-    switch ($event['type'])
-    {
-    case 7:
-      $events2[$event['line']] = $event;
-      break;
-    case 8:
-      unset($events2[$event['line']]);
-      break;
-    }
-  }
-  return $events2;
-}
-?>
-
 <?php if (false) : ?>
 <?php if (0 < count(($events = get_logon_events()))) : ?>
-<table>
+<table class="table table-striped table-bordered table-hover table-condensed">
     <tr><th colspan="6">已登录用户</th></tr>
 <?php foreach ($events as $event ) : ?>
      <tr>
-        <td width="15%"><?php echo $event['user'];?></td>
-        <td width="15%">TTY: <font color='#CC0000'><?php echo $event['line'];?></font></td>
-        <td width="25%">源地址: <font color='#CC0000'><?php echo $event['host'];?></font></td>
-        <td width="15%">开始于: <font color='#CC0000'><?php echo gmstrftime('%m-%d %H:%M', $event['gmtime']);?></font></td>
-        <td width="15%">空闲: <font color='#CC0000'><?php echo '';?></font></td>
-        <td width="15%">当前命令: <font color='#CC0000'><?php echo $event['pid'];?></font></td>
+        <td><?php echo $event['user'];?></td>
+        <td>TTY: <font color='#CC0000'><?php echo $event['line'];?></font></td>
+        <td>源地址: <font color='#CC0000'><?php echo $event['host'];?></font></td>
+        <td>开始于: <font color='#CC0000'><?php echo gmstrftime('%m-%d %H:%M', $event['gmtime']);?></font></td>
+        <td>空闲: <font color='#CC0000'><?php echo '';?></font></td>
+        <td>当前命令: <font color='#CC0000'><?php echo $event['pid'];?></font></td>
     </tr>
 <?php endforeach; ?>
 </table>
 <?php endif; ?>
 <?php endif; ?>
 
-
-<a name="w_performance"></a><a name="bottom"></a>
 <form action="<?php echo $_SERVER['PHP_SELF']."#bottom";?>" method="post">
 <!--服务器性能检测-->
-<table>
+<table class="table table-striped table-bordered table-hover table-condensed">
   <tr><th colspan="5">服务器性能检测</th></tr>
-  <tr align="center">
-    <td width="19%">参照对象</td>
-    <td width="17%">整数运算能力检测<br />(1+1运算300万次)</td>
-    <td width="17%">浮点运算能力检测<br />(圆周率开平方300万次)</td>
-    <td width="17%">数据I/O能力检测<br />(读取10K文件1万次)</td>
-    <td width="30%">CPU信息</td>
+  <tr>
+    <td>参照对象</td>
+    <td>整数运算能力检测<br />(1+1运算300万次)</td>
+    <td>浮点运算能力检测<br />(圆周率开平方300万次)</td>
+    <td>数据I/O能力检测<br />(读取10K文件1万次)</td>
   </tr>
-  <tr align="center">
-    <td align="left">美国 LinodeVPS</td>
+  <tr>
+    <td>4 x Xeon L5520 @ 2.27GHz</td>
     <td>0.357秒</td>
     <td>0.802秒</td>
     <td>0.023秒</td>
-    <td align="left">4 x Xeon L5520 @ 2.27GHz</td>
   </tr>
-  <tr align="center">
-    <td align="left">美国 PhotonVPS.com</td>
+  <tr>
+    <td>8 x Xeon E5520 @ 2.27GHz</td>
     <td>0.431秒</td>
     <td>1.024秒</td>
     <td>0.034秒</td>
-    <td align="left">8 x Xeon E5520 @ 2.27GHz</td>
   </tr>
-  <tr align="center">
-    <td align="left">德国 SpaceRich.com</td>
+  <tr>
+    <td>4 x Core i7 920 @ 2.67GHz</td>
     <td>0.421秒</td>
     <td>1.003秒</td>
     <td>0.038秒</td>
-    <td align="left">4 x Core i7 920 @ 2.67GHz</td>
   </tr>
-  <tr align="center">
-    <td align="left">美国 RiZie.com</td>
+  <tr>
+    <td>2 x Pentium4 3.00GHz</td>
     <td>0.521秒</td>
     <td>1.559秒</td>
     <td>0.054秒</td>
-    <td align="left">2 x Pentium4 3.00GHz</td>
   </tr>
-  <tr align="center">
-    <td align="left">埃及 CitynetHost.com</td>
+  <tr>
+    <td>2 x Core2Duo E4600 @ 2.40GHz</td>
     <td>0.343秒</td>
     <td>0.761秒</td>
     <td>0.023秒</td>
-    <td align="left">2 x Core2Duo E4600 @ 2.40GHz</td>
   </tr>
-  <tr align="center">
-    <td align="left">美国 IXwebhosting.com</td>
+  <tr>
+    <td>4 x Xeon E5530 @ 2.40GHz</td>
     <td>0.535秒</td>
     <td>1.607秒</td>
     <td>0.058秒</td>
-    <td align="left">4 x Xeon E5530 @ 2.40GHz</td>
   </tr>
-  <tr align="center">
+  <tr>
     <td>本台服务器</td>
     <td><?php echo $valInt;?><br /><input class="btn" name="act" type="submit" value="整型测试" /></td>
     <td><?php echo $valFloat;?><br /><input class="btn" name="act" type="submit" value="浮点测试" /></td>
     <td><?php echo $valIo;?><br /><input class="btn" name="act" type="submit" value="IO测试" /></td>
-    <td></td>
   </tr>
 </table>
 <input type="hidden" name="pInt" value="<?php echo $valInt;?>" />
@@ -983,32 +948,28 @@ function get_logon_events()
 
 <a name="w_networkspeed"></a>
 <!--网络速度测试-->
-<table>
+<table class="table table-striped table-bordered table-hover table-condensed">
   <tr><th colspan="3">网络速度测试</th></tr>
   <tr>
-    <td width="19%" align="center"><input name="act" type="submit" class="btn" value="开始测试" />
+    <td><input name="act" type="submit" class="btn" value="开始测试" />
         <br />
   向客户端传送1000k字节数据<br />
   带宽比例按理想值计算
   </td>
-    <td width="81%" align="center" >
+    <td >
 
-  <table align="center" width="550" border="0" cellspacing="0" cellpadding="0" >
-    <tr >
-    <td height="15" width="50">带宽</td>
-  <td height="15" width="50">1M</td>
-    <td height="15" width="50">2M</td>
-    <td height="15" width="50">3M</td>
-    <td height="15" width="50">4M</td>
-    <td height="15" width="50">5M</td>
-    <td height="15" width="50">6M</td>
-    <td height="15" width="50">7M</td>
-    <td height="15" width="50">8M</td>
-    <td height="15" width="50">9M</td>
-    <td height="15" width="50">10M</td>
+  <table border="0" cellspacing="0" cellpadding="0" >
+    <tr>
+    <td>带宽</td>
+    <td>1M</td>
+    <td>2M</td>
+    <td>4M</td>
+    <td>8M</td>
+    <td>16M</td>
     </tr>
    <tr>
-    <td colspan="11" class="suduk" ><table align="center" width="550" border="0" cellspacing="0" cellpadding="0" height="8" class="suduk">
+    <td colspan="6">
+    <table class="table table-striped table-bordered table-hover table-condensed">
     <tr>
       <td class="sudu"  width="<?php
   if(preg_match("/[^\d-., ]/",$speed))
@@ -1040,132 +1001,14 @@ function get_logon_events()
 </table>
 </form>
 
-<a name="w_php"></a>
-<table>
-  <tr><th colspan="4">PHP相关参数</th></tr>
+<table class="table table-striped table-bordered table-hover table-condensed">
   <tr>
-    <td width="32%">PHP信息（phpinfo）：</td>
-    <td width="18%">
-    <?php
-    $phpSelf = $_SERVER['PHP_SELF'] ? $_SERVER['PHP_SELF'] : $_SERVER['SCRIPT_NAME'];
-    $disFuns=get_cfg_var("disable_functions");
-    ?>
-    <?php echo (preg_match("/phpinfo/i",$disFuns))? '<font color="red">×</font>' :"<a href='$phpSelf?act=phpinfo' target='_blank'>PHPINFO</a>";?>
-    </td>
-    <td width="32%">PHP版本（php_version）：</td>
-    <td width="18%"><?php echo PHP_VERSION;?></td>
-  </tr>
-  <tr>
-    <td>PHP运行方式：</td>
-    <td><?php echo strtoupper(php_sapi_name());?></td>
-    <td>脚本占用最大内存（memory_limit）：</td>
-    <td><?php echo show("memory_limit");?></td>
-  </tr>
-  <tr>
-    <td>PHP安全模式（safe_mode）：</td>
-    <td><?php echo show("safe_mode");?></td>
-    <td>POST方法提交最大限制（post_max_size）：</td>
-    <td><?php echo show("post_max_size");?></td>
-  </tr>
-  <tr>
-    <td>上传文件最大限制（upload_max_filesize）：</td>
-    <td><?php echo show("upload_max_filesize");?></td>
-    <td>浮点型数据显示的有效位数（precision）：</td>
-    <td><?php echo show("precision");?></td>
-  </tr>
-  <tr>
-    <td>脚本超时时间（max_execution_time）：</td>
-    <td><?php echo show("max_execution_time");?>秒</td>
-    <td>socket超时时间（default_socket_timeout）：</td>
-    <td><?php echo show("default_socket_timeout");?>秒</td>
-  </tr>
-  <tr>
-    <td>PHP页面根目录（doc_root）：</td>
-    <td><?php echo show("doc_root");?></td>
-    <td>用户根目录（user_dir）：</td>
-    <td><?php echo show("user_dir");?></td>
-  </tr>
-  <tr>
-    <td>dl()函数（enable_dl）：</td>
-    <td><?php echo show("enable_dl");?></td>
-    <td>指定包含文件目录（include_path）：</td>
-    <td><?php echo show("include_path");?></td>
-  </tr>
-  <tr>
-    <td>显示错误信息（display_errors）：</td>
-    <td><?php echo show("display_errors");?></td>
-    <td>自定义全局变量（register_globals）：</td>
-    <td><?php echo show("register_globals");?></td>
-  </tr>
-  <tr>
-    <td>数据反斜杠转义（magic_quotes_gpc）：</td>
-    <td><?php echo show("magic_quotes_gpc");?></td>
-    <td>"&lt;?...?&gt;"短标签（short_open_tag）：</td>
-    <td><?php echo show("short_open_tag");?></td>
-  </tr>
-  <tr>
-    <td>"&lt;% %&gt;"ASP风格标记（asp_tags）：</td>
-    <td><?php echo show("asp_tags");?></td>
-    <td>忽略重复错误信息（ignore_repeated_errors）：</td>
-    <td><?php echo show("ignore_repeated_errors");?></td>
-  </tr>
-  <tr>
-    <td>忽略重复的错误源（ignore_repeated_source）：</td>
-    <td><?php echo show("ignore_repeated_source");?></td>
-    <td>报告内存泄漏（report_memleaks）：</td>
-    <td><?php echo show("report_memleaks");?></td>
-  </tr>
-  <tr>
-    <td>自动字符串转义（magic_quotes_gpc）：</td>
-    <td><?php echo show("magic_quotes_gpc");?></td>
-    <td>外部字符串自动转义（magic_quotes_runtime）：</td>
-    <td><?php echo show("magic_quotes_runtime");?></td>
-  </tr>
-  <tr>
-    <td>打开远程文件（allow_url_fopen）：</td>
-    <td><?php echo show("allow_url_fopen");?></td>
-    <td>声明argv和argc变量（register_argc_argv）：</td>
-    <td><?php echo show("register_argc_argv");?></td>
-  </tr>
-  <tr>
-    <td>Cookie 支持：</td>
-    <td><?php echo isset($_COOKIE)?'<font color="green">√</font>' : '<font color="red">×</font>';?></td>
-    <td>拼写检查（ASpell Library）：</td>
-    <td><?php echo isfun("aspell_check_raw");?></td>
-  </tr>
-   <tr>
-    <td>高精度数学运算（BCMath）：</td>
-    <td><?php echo isfun("bcadd");?></td>
-    <td>PREL相容语法（PCRE）：</td>
-    <td><?php echo isfun("preg_match");?></td>
-   <tr>
-    <td>PDF文档支持：</td>
-    <td><?php echo isfun("pdf_close");?></td>
-    <td>SNMP网络管理协议：</td>
-    <td><?php echo isfun("snmpget");?></td>
-  </tr>
-   <tr>
-    <td>VMailMgr邮件处理：</td>
-    <td><?php echo isfun("vm_adduser");?></td>
-    <td>Curl支持：</td>
-    <td><?php echo isfun("curl_init");?></td>
-  </tr>
-   <tr>
-    <td>SMTP支持：</td>
-    <td><?php echo get_cfg_var("SMTP")?'<font color="green">√</font>' : '<font color="red">×</font>';?></td>
-    <td>SMTP地址：</td>
-    <td><?php echo get_cfg_var("SMTP")?get_cfg_var("SMTP"):'<font color="red">×</font>';?></td>
+    <td><A href="https://github.com/phuslu/cmdhere" target="_blank"><?php echo $title.$version;?></A></td>
+    <td><?php $run_time = sprintf('%0.4f', microtime_float() - $time_start);?>Processed in <?php echo $run_time?> seconds. <?php echo memory_usage();?> memory usage.</td>
+    <td><a href="#w_top">返回顶部</a></td>
   </tr>
 </table>
 
-<table>
-  <tr>
-    <td class="w_foot"><A href="https://github.com/phuslu/cmdhere" target="_blank"><?php echo $title.$version;?></A></td>
-    <td class="w_foot"><?php $run_time = sprintf('%0.4f', microtime_float() - $time_start);?>Processed in <?php echo $run_time?> seconds. <?php echo memory_usage();?> memory usage.</td>
-    <td class="w_foot"><a href="#w_top">返回顶部</a></td>
-  </tr>
-</table>
-
+</div>
 </body>
 </html>
-
